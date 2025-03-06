@@ -3,6 +3,7 @@ import numpy as np
 from tensorflow.keras.models import load_model
 import os
 
+# Load the model
 path = r"C:\Users\lenovo\OneDrive - mgmtech\Documents\MIT WPU\4. FY\Capstone\Github\Capstone\model_inception.h5"
 converted_path = path.replace("\\", "/")
 model_path = converted_path
@@ -14,8 +15,10 @@ except Exception as e:
     print(f"Error loading model: {e}")
     exit()
 
-input_size = (224, 224)
+# Define the input size expected by the model
+input_size = (224, 224)  # Adjust if necessary
 
+# Original class mapping
 original_classes = {
     '(BT) Body Tissue or Organ': 0,
     '(GE) Glass equipment-packaging 551': 1,
@@ -31,21 +34,25 @@ original_classes = {
     'Tweezers': 11
 }
 
+# New mapping to broader categories
 broad_categories = {
     'infectious waste': ['Gauze', 'Gloves', 'Mask', '(PE) Plastic equipment-packaging', '(PP) Paper equipment-packaging'],
     'pathological waste': ['(BT) Body Tissue or Organ'],
     'sharps': ['(SN) Syringe needles', 'Syringe', 'Tweezers']
 }
 
+# Create a mapping from original class indices to broad categories
 category_mapping = {}
 for category, items in broad_categories.items():
     for item in items:
         if item in original_classes:
             category_mapping[original_classes[item]] = category
 
+# Function to get the broad category
 def get_broad_category(predicted_class_index):
     return category_mapping.get(predicted_class_index, "Unknown")
 
+# Function to preprocess and predict an image
 def predict_image(img):
     img = cv2.resize(img, input_size)
     img = img / 255.0
@@ -55,24 +62,16 @@ def predict_image(img):
     predicted_class_prob = predictions[0][predicted_class_index]
     return predicted_class_index, predicted_class_prob
 
+# Function to display prediction results
 def display_prediction(frame, predicted_class_index, predicted_class_prob):
     broad_category = get_broad_category(predicted_class_index)
-    text = f'Category: {broad_category} (Confidence: {predicted_class_prob:.2f})'
-    height, width, _ = frame.shape
-    font_scale = min(width, height) / 1000
-    font_thickness = max(1, int(font_scale * 2))
-    (text_width, text_height), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)
-    text_x = (width - text_width) // 2
-    text_y = text_height + 10
-    if text_x < 0:
-        text_x = 10
-    if text_y > height:
-        text_y = height - 10
-    cv2.putText(frame, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), font_thickness)
+    cv2.putText(frame, f'Category: {broad_category} (Confidence: {predicted_class_prob:.2f})', 
+                (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
     cv2.imshow('Prediction', frame)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+# Main menu
 def main_menu():
     print("Choose an option:")
     print("1. Real-time prediction (live video)")
@@ -82,6 +81,7 @@ def main_menu():
     choice = input("Enter your choice (1/2/3/4): ")
     return choice
 
+# Real-time prediction
 def real_time_prediction():
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
@@ -94,30 +94,29 @@ def real_time_prediction():
             print("Failed to grab frame.")
             break
 
+        # Predict the class and confidence
         predicted_class_index, predicted_class_prob = predict_image(frame)
-        broad_category = get_broad_category(predicted_class_index)
-        text = f'Category: {broad_category} (Confidence: {predicted_class_prob:.2f})'
-        height, width, _ = frame.shape
-        font_scale = min(width, height) / 1000
-        font_thickness = max(1, int(font_scale * 2))
-        (text_width, text_height), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)
-        text_x = (width - text_width) // 2
-        text_y = text_height + 10
-        if text_x < 0:
-            text_x = 10
-        if text_y > height:
-            text_y = height - 10
-        if predicted_class_prob >= 0.7:
-            cv2.putText(frame, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), font_thickness)
+
+        # Display the prediction on the live feed
+        if predicted_class_prob >= 0.7:  # Confidence threshold
+            broad_category = get_broad_category(predicted_class_index)
+            cv2.putText(frame, f'Category: {broad_category} (Confidence: {predicted_class_prob:.2f})', 
+                        (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         else:
-            cv2.putText(frame, "No confident prediction", (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 255), font_thickness)
+            cv2.putText(frame, "No confident prediction", (10, 30), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
+        # Display the live feed
         cv2.imshow('Real-time Prediction', frame)
+
+        # Break the loop on 'q' key press
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
     cap.release()
     cv2.destroyAllWindows()
 
+# Capture and predict
 def capture_and_predict():
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
@@ -130,11 +129,12 @@ def capture_and_predict():
         return
 
     predicted_class_index, predicted_class_prob = predict_image(frame)
-    if predicted_class_prob >= 0.7:
+    if predicted_class_prob >= 0.7:  # Confidence threshold
         display_prediction(frame, predicted_class_index, predicted_class_prob)
 
     cap.release()
 
+# Predict from local image
 def predict_from_local_image():
     Temp = r"C:\Users\lenovo\OneDrive - mgmtech\Documents\MIT WPU\4. FY\Capstone\Github\Capstone\Test Images"
     converted_folder_path = Temp.replace("\\", "/")
@@ -157,8 +157,11 @@ def predict_from_local_image():
             print(f"Error: Could not read image '{image_path}'.")
             continue
 
+        # Predict the class and confidence
         predicted_class_index, predicted_class_prob = predict_image(frame)
-        if predicted_class_prob >= 0.7:
+
+        # Display the prediction
+        if predicted_class_prob >= 0.7:  # Confidence threshold
             broad_category = get_broad_category(predicted_class_index)
             print(f"Image: {image_name} | Category: {broad_category} | Confidence: {predicted_class_prob:.2f}")
             cv2.putText(frame, f'Category: {broad_category} (Confidence: {predicted_class_prob:.2f})', 
@@ -168,11 +171,13 @@ def predict_from_local_image():
             cv2.putText(frame, "No confident prediction", (10, 30), 
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
+        # Display the image with prediction
         cv2.imshow('Prediction', frame)
-        cv2.waitKey(0)
+        cv2.waitKey(0)  # Wait for a key press to move to the next image
 
     cv2.destroyAllWindows()
 
+# Main program loop
 while True:
     choice = main_menu()
     if choice == '1':
