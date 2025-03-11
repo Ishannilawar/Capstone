@@ -119,7 +119,7 @@ def real_time_prediction():
     cv2.destroyAllWindows()
 
 def capture_and_predict():
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(2)
     if not cap.isOpened():
         print("Error: Could not access webcam.")
         return
